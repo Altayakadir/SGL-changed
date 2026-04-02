@@ -1,0 +1,10 @@
+transformers==4.41.2
+tokenizers==0.19.1
+accelerate>=0.30,<1.0
+sentencepiece
+timm
+einops
+decord
+peft==0.11.1
+bitsandbytes
+pillow

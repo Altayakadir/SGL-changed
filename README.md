@@ -88,7 +88,7 @@ drive.mount('/content/drive')
 !git clone https://github.com/<your-username>/<your-repo>.git
 %cd /content/<your-repo>
 !pip install -U pip
-!pip install torch torchvision transformers accelerate sentencepiece timm einops decord pillow
+!pip install -r requirements-colab.txt
 ```
 
 Store datasets and checkpoints in Google Drive, then run:
@@ -104,6 +104,7 @@ Store datasets and checkpoints in Google Drive, then run:
 Notes:
 
 - Use `torchrun --nproc_per_node=1` on Colab, not the 8-GPU launcher.
+- `requirements-colab.txt` pins a compatible `transformers` stack for this codebase.
 - `InternVL2-26B` is usually too large for standard free Colab in full precision. In practice you will likely need `--load-in-4bit`, a high-memory GPU, or a smaller large model such as `InternVL2-8B`.
 - For a 24-layer small model such as `InternVL2-2B`, use ranges like `1-8`, `9-16`, and `17-24`.
 
