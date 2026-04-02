@@ -663,7 +663,7 @@ if __name__ == '__main__':
         small_config.llm_config._attn_implementation = 'eager' 
     else:
         small_config.llm_config.attn_implementation = 'eager'
-    small_config.vision_config.use_flash_attn = True 
+    small_config.vision_config.use_flash_attn = False
 
     small_model = InternVLChatModel.from_pretrained(
         args.small_checkpoint, config=small_config, low_cpu_mem_usage=True, torch_dtype=torch.bfloat16,
@@ -681,7 +681,7 @@ if __name__ == '__main__':
     else:
         large_config.llm_config.attn_implementation = 'eager'
     # our method also supports inference with flashattn by setting attn_implementation to 'flash_attention_2'
-    large_config.vision_config.use_flash_attn = True 
+    large_config.vision_config.use_flash_attn = False
 
     large_model = InternVLChatModel.from_pretrained(
         args.large_checkpoint, config=large_config, low_cpu_mem_usage=True, torch_dtype=torch.bfloat16,

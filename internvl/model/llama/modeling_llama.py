@@ -29,7 +29,6 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers.activations import ACT2FN
 from transformers.cache_utils import Cache, DynamicCache, StaticCache
 from transformers.modeling_attn_mask_utils import AttentionMaskConverter
-from transformers.modeling_flash_attention_utils import _flash_attention_forward
 from transformers.modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -54,6 +53,11 @@ from transformers.generation.utils import GenerateNonBeamOutput, GenerateDecoder
 logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "LlamaConfig"
+
+try:
+    from transformers.modeling_flash_attention_utils import _flash_attention_forward
+except ImportError:
+    _flash_attention_forward = None
 
 try:
     from transformers.modeling_rope_utils import ROPE_INIT_FUNCTIONS
@@ -550,6 +554,10 @@ class LlamaFlashAttention2(LlamaAttention):
         cache_position: Optional[torch.LongTensor] = None,
         position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,  # will become mandatory in v4.45
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
+        if _flash_attention_forward is None:
+            raise ImportError(
+                "flash_attention_2 was requested, but transformers.modeling_flash_attention_utils is unavailable."
+            )
         if isinstance(past_key_value, StaticCache):
             raise ValueError(
                 "`static` cache implementation is not compatible with `attn_implementation==flash_attention_2` "

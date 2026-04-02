@@ -11,6 +11,50 @@ LARGE_MODEL_PRUNE_LAYER=${LARGE_MODEL_PRUNE_LAYER:-0.4}
 LARGE_MODEL_PRUNE_RATIO=${LARGE_MODEL_PRUNE_RATIO:-0.4}
 LOAD_FLAGS=${LOAD_FLAGS:-}
 
+resolve_model_dir() {
+    local input_path="$1"
+
+    if [ -f "${input_path}/config.json" ]; then
+        echo "${input_path}"
+        return 0
+    fi
+
+    if [ -d "${input_path}/snapshots" ]; then
+        local snapshot_dir
+        snapshot_dir=$(find "${input_path}/snapshots" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+        if [ -n "${snapshot_dir}" ] && [ -f "${snapshot_dir}/config.json" ]; then
+            echo "${snapshot_dir}"
+            return 0
+        fi
+    fi
+
+    local parent_dir base_name cache_match snapshot_dir
+    parent_dir=$(dirname "${input_path}")
+    base_name=$(basename "${input_path}")
+    cache_match=$(find "${parent_dir}" -mindepth 1 -maxdepth 1 -type d -name "models--*--${base_name}" | head -n 1)
+    if [ -n "${cache_match}" ]; then
+        if [ -f "${cache_match}/config.json" ]; then
+            echo "${cache_match}"
+            return 0
+        fi
+        snapshot_dir=$(find "${cache_match}/snapshots" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+        if [ -n "${snapshot_dir}" ] && [ -f "${snapshot_dir}/config.json" ]; then
+            echo "${snapshot_dir}"
+            return 0
+        fi
+    fi
+
+    echo "Could not resolve a model directory from: ${input_path}" >&2
+    echo "Look for a folder containing config.json or a Hugging Face cache folder with snapshots/." >&2
+    return 1
+}
+
+SMALL_CHECKPOINT=$(resolve_model_dir "${SMALL_CHECKPOINT}")
+LARGE_CHECKPOINT=$(resolve_model_dir "${LARGE_CHECKPOINT}")
+
+echo "Resolved SMALL_CHECKPOINT=${SMALL_CHECKPOINT}"
+echo "Resolved LARGE_CHECKPOINT=${LARGE_CHECKPOINT}"
+
 torchrun \
     --nnodes=1 \
     --node_rank=0 \
