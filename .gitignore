@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter / Colab
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Project outputs
+results/
+results-*/
+*.log
+
+# Large local assets
+data/
+checkpoints/
+model_ckpts/
+models/
+*.pt
+*.pth
+*.bin
+*.safetensors
+
