@@ -108,6 +108,18 @@ Notes:
 - `InternVL2-26B` is usually too large for standard free Colab in full precision. In practice you will likely need `--load-in-4bit`, a high-memory GPU, or a smaller large model such as `InternVL2-8B`.
 - For a 24-layer small model such as `InternVL2-2B`, use ranges like `1-8`, `9-16`, and `17-24`.
 
+If you do not want to store checkpoints in Google Drive, the Colab launcher also accepts Hugging Face repo ids and downloads them into `/content/model_ckpts` for the current session:
+
+```bash
+%env SMALL_CHECKPOINT=OpenGVLab/InternVL2-2B
+%env LARGE_CHECKPOINT=OpenGVLab/InternVL2-8B
+%env SMALL_ATTENTION_LAYER_RANGE=1-8
+%env LOAD_FLAGS=--load-in-4bit
+!bash colab_textvqa_single_gpu.sh
+```
+
+You can also use bare model names such as `InternVL2-2B`; these are resolved to `OpenGVLab/<model-name>`.
+
 
 
 
