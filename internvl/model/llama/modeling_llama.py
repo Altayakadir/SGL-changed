@@ -37,7 +37,6 @@ from transformers.modeling_outputs import (
     SequenceClassifierOutputWithPast,
     TokenClassifierOutput,
 )
-from transformers.modeling_rope_utils import ROPE_INIT_FUNCTIONS
 from transformers.modeling_utils import PreTrainedModel
 from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.utils import (
@@ -55,6 +54,74 @@ from transformers.generation.utils import GenerateNonBeamOutput, GenerateDecoder
 logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "LlamaConfig"
+
+try:
+    from transformers.modeling_rope_utils import ROPE_INIT_FUNCTIONS
+except ImportError:
+    def _get_rope_dim(config=None, **rope_kwargs):
+        if "dim" in rope_kwargs and rope_kwargs["dim"] is not None:
+            return rope_kwargs["dim"]
+        if config is None:
+            raise ValueError("RoPE fallback requires either a config or an explicit 'dim'.")
+        return getattr(config, "head_dim", config.hidden_size // config.num_attention_heads)
+
+    def _get_rope_base(config=None, **rope_kwargs):
+        if "base" in rope_kwargs and rope_kwargs["base"] is not None:
+            return rope_kwargs["base"]
+        if config is None:
+            raise ValueError("RoPE fallback requires either a config or an explicit 'base'.")
+        return config.rope_theta
+
+    def _get_rope_max_position_embeddings(config=None, **rope_kwargs):
+        if "max_position_embeddings" in rope_kwargs and rope_kwargs["max_position_embeddings"] is not None:
+            return rope_kwargs["max_position_embeddings"]
+        if config is None:
+            raise ValueError(
+                "RoPE fallback requires either a config or an explicit 'max_position_embeddings'."
+            )
+        return config.max_position_embeddings
+
+    def _get_rope_factor(config=None, **rope_kwargs):
+        if "factor" in rope_kwargs and rope_kwargs["factor"] is not None:
+            return rope_kwargs["factor"]
+        if config is not None and config.rope_scaling is not None:
+            return config.rope_scaling.get("factor", 1.0)
+        return 1.0
+
+    def _build_inv_freq(dim, base, device):
+        return 1.0 / (base ** (torch.arange(0, dim, 2, device=device, dtype=torch.float32) / dim))
+
+    def _rope_default(config=None, device=None, seq_len=None, **rope_kwargs):
+        dim = _get_rope_dim(config, **rope_kwargs)
+        base = _get_rope_base(config, **rope_kwargs)
+        inv_freq = _build_inv_freq(dim, base, device)
+        return inv_freq, 1.0
+
+    def _rope_linear(config=None, device=None, seq_len=None, **rope_kwargs):
+        dim = _get_rope_dim(config, **rope_kwargs)
+        base = _get_rope_base(config, **rope_kwargs)
+        factor = _get_rope_factor(config, **rope_kwargs)
+        inv_freq = _build_inv_freq(dim, base, device) / factor
+        return inv_freq, 1.0
+
+    def _rope_dynamic(config=None, device=None, seq_len=None, **rope_kwargs):
+        dim = _get_rope_dim(config, **rope_kwargs)
+        base = _get_rope_base(config, **rope_kwargs)
+        max_position_embeddings = _get_rope_max_position_embeddings(config, **rope_kwargs)
+        factor = _get_rope_factor(config, **rope_kwargs)
+        seq_len = max_position_embeddings if seq_len is None else seq_len
+        if seq_len > max_position_embeddings and dim > 2:
+            base = base * ((factor * seq_len / max_position_embeddings) - (factor - 1.0)) ** (
+                dim / (dim - 2)
+            )
+        inv_freq = _build_inv_freq(dim, base, device)
+        return inv_freq, 1.0
+
+    ROPE_INIT_FUNCTIONS = {
+        "default": _rope_default,
+        "linear": _rope_linear,
+        "dynamic": _rope_dynamic,
+    }
 
 
 def _prepare_4d_causal_attention_mask_with_cache_position(
